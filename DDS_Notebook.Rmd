@@ -1,0 +1,99 @@
+---
+title: "Doing Data Science Exercises"
+output: html_notebook
+---
+# Introduction
+This is my notebook to chart my progress through the examples in the book *Doing Data Science*. 
+
+## Exploratory Data Analysis
+The exploratory data analysis example has us using data from a simulated day's worth of:  
+
+* ads shown
+* clicks recorded  
+
+on the *New York Times* homepage in May 2012. 
+
+Each row is a __user__ and three are five columns: 
+
+1. \$Age (age in whole years)
+2. \$Gender where (0 = female, 1 = male)
+3. \$Impressions (\# of impressions)
+4. \$Clicks (\# of clicks)
+5. \$Signed_In (If person is logged-in, 0 = no, 1 = yes)
+
+### Import Data
+```{r import_data}
+dat <- read.csv(url("http://stat.columbia.edu/~rachel/datasets/nyt1.csv"))
+```
+
+### Create age groups variable
+```{r create_groups}
+# 1. Create Groups
+dat$age_groups <- cut(dat$Age, c(-Inf, 0, 17, 24, 34, 44, 54, 64, Inf))
+
+```
+The cut function allows for segmentation of the values based on defined intervals. Note that the use of the segments having the x-1 boundaries allows for specific inclusion of the ages needed. 0-17 would means all people greater than the age of 0, and less than or equal to the age of 17, which is the same as "<18" in real terms. This gives the next segment all people older than 17 and less than or equal to 24, which is the same as saying "18-24". We need to remember to use "-Inf, 0" to account for all values that are 0, as they are values for those that are not signed in at the time of recording. This can be checked by comparing the value of the -inf,0 group to the count of 0 values in dat\$Signed_In. 
+
+```{r descriptives}
+# Look at descriptives of groups using doBy package
+library(doBy)
+descriptives <- function(x){c(length(x), min(x), mean(x), max(x))}
+```
+
+For "summaryBy", the function requires the input functions used to summarize (this will be put in the FUN= portion of the function), mean is the default. By creating a simple function that lists the summaries required for analysis, we can then create a single table with multiple summaries to skip the repetitive coding. Here, we are listing out the count of the data (length), the minimum value (min), the average value (mean) and the max value (max).
+
+```{r summarize_AgebyAgeGroups}
+# Summarize Ages by age groups (using count, minimum, mean, and max values)
+summaryBy(Age~age_groups, data=dat, FUN = descriptives, fun.names = c("length","min", "mean", "max"))
+
+```
+
+Using Age~age_groups references the \$group within the "dat" variable created to store our data for this example. We have to have the cut groups within the parent dataframe for this function to work. Thus, we have "dat\$age_groups" defined to allow for the factors to be read by the function and summarized accordingly. 
+
+```{r GSIC_byAge}
+summaryBy(Gender+Signed_In+Impressions+Clicks~age_groups,data=dat)
+```
+Here, we can see that our groups are skewed towards male, but this imbalance decreases as the ages increase. The signed-in mean simply shows us that no age was recorded for those not-signed in, and no age=0 errors exist in the signed-in portion. Impressions mean shows that the mean clicks are essentially equal across groups, people tend to load about 5 ads per page view. The clicks mean allows us to see that both people over 54, people under 18, and those without an account all tend to click through at the same rate. While those 18-54 with an account click through about 1/3 of the time as their fellow groups. Similarly, the trend between groups 6-8 us that with each increase in bracket, the mean jumps by .05 with each step. This suggests that older people, and younger people tend to click links more. This could be that those with less experience with the internet click the links more often, or that the advertising is especially interesting to them, amongst other things. Also, we can see that those who are unregistered tend to act most like people who are either young or old, possibly indicating that they are similarly attracted or inexperienced, among other possible factors. 
+
+```{r plot_dist}
+library(ggplot2)
+ggplot(dat, aes(x=Impressions, fill=age_groups))+geom_histogram(binwidth=1)
+ggplot(dat, aes(x=age_groups, y=Impressions, fill=age_groups))+geom_boxplot()
+```
+Here we see visual representations of the distributions. The first chart (impressions x count, by age_group) shows us the general distribution of impressions shown on the homepage peaks at 5. This confirms our impressions mean from previously, though also shows through the spread of the distribution that the distribution is either normal centered at 5, or possibly poisson. If interested, we could fit these distributions and check for quality of fit. The second chart (age_groups x impressions, by age_groups) illustrates the distribution of impressions by the age_groups. This allows us to check and make sure each group was being shown an similar number of impressions, which could bias the outcomes of any analysis if this were to be skewed. All were, and there were some notable outliers that we could clear if we were interested in keeping the data to a normalized range. To clean, I would simply ignore any impression values below 0 and above 10.
+
+This brings up a question to check and ensure the data is valid for all cases: are there any clicks for people with impressions = 0? There should be 0 people with clicks > 0 and impressions < 1. Let's take a look. 
+
+```{r click_check}
+table(dat$Impressions==0, dat$Clicks, dnn=(c("Impressions=0", "Clicks")
+))
+```
+Here, we can see that 3066 people did not see any ads on the homepage (Impressions = 0 AND TRUE). Similarly, for those that did click, they saw more than 0 impressions (at least 1 impression). Thus, we know that there are people that did not see any ads, and if we are not interested in them we can exclude them as they also did not click on any ads (the programs and data scraping worked correctly without errors on this aspect). 
+
+### For a single day: 
+#### Plot dist of \# impressions and click thru rate ($CTR = clicks/impressions) for each category
+```{r CTR_dist}
+
+
+
+#CTR <- function(x,y){x/y}
+#CTRbyAge <- CTR(data$Clicks/data$Impressions)~age_groups
+
+```
+
+
+
+
+
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
